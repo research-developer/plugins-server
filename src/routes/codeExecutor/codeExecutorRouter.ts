@@ -217,6 +217,95 @@ codeExecutorRouter.post('/execute', async (req: Request, res: Response) => {
   });
 });
 
+// New endpoint: Git-style find/replace functionality
+codeExecutorRouter.post('/replace', async (req: Request, res: Response) => {
+  const { filename, message } = req.body;
+  if (!filename || typeof filename !== 'string') {
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Failed,
+      'Filename must be provided as a string',
+      null,
+      StatusCodes.BAD_REQUEST
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+  if (!message || typeof message !== 'string') {
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Failed,
+      'Replacement message must be provided as a string',
+      null,
+      StatusCodes.BAD_REQUEST
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+  if (!isAllowedFile(filename)) {
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Failed,
+      'File type not allowed',
+      null,
+      StatusCodes.BAD_REQUEST
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+  const filePath = path.join(codeStorageDir, filename);
+  if (!fs.existsSync(filePath)) {
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Failed,
+      `File ${filename} not found`,
+      null,
+      StatusCodes.NOT_FOUND
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+  try {
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    // Parse the find/replace message in the format s<delimiter>find<delimiter>replace<delimiter>flags
+    const regexPattern = /^s(.)(.*?)\1(.*?)\1([g]?)$/;
+    const match = message.match(regexPattern);
+    if (!match) {
+      const serviceResponse = new ServiceResponse(
+        ResponseStatus.Failed,
+        'Invalid find/replace message format. Expected format: s<delimiter>find<delimiter>replace<delimiter>flags',
+        null,
+        StatusCodes.BAD_REQUEST
+      );
+      return handleServiceResponse(serviceResponse, res);
+    }
+    const findPattern = match[2];
+    const replaceStr = match[3];
+    const flags = match[4] || '';
+    let regExp: RegExp;
+    try {
+      regExp = new RegExp(findPattern, flags);
+    } catch (err) {
+      const serviceResponse = new ServiceResponse(
+        ResponseStatus.Failed,
+        `Invalid regular expression: ${(err as Error).message}`,
+        null,
+        StatusCodes.BAD_REQUEST
+      );
+      return handleServiceResponse(serviceResponse, res);
+    }
+    const newContent = fileContent.replace(regExp, replaceStr);
+    fs.writeFileSync(filePath, newContent, 'utf8');
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Success,
+      `File ${filename} updated successfully`,
+      { newContent },
+      StatusCodes.OK
+    );
+    return handleServiceResponse(serviceResponse, res);
+  } catch (err) {
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Failed,
+      `Error processing file: ${(err as Error).message}`,
+      null,
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+});
+
 // Initialize OpenAPI registry for the code executor
 export const codeExecutorRegistry = new OpenAPIRegistry();
 
