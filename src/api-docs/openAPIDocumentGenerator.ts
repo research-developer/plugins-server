@@ -1,5 +1,6 @@
 import { OpenApiGeneratorV3, OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 
+import { codeExecutorRegistry } from '@/routes/codeExecutor/codeExecutorRouter';
 import { excelGeneratorRegistry } from '@/routes/excelGenerator/excelGeneratorRouter';
 import { healthCheckRegistry } from '@/routes/healthCheck/healthCheckRouter';
 import { notionDatabaseRegistry } from '@/routes/notionDatabase/notionDatabaseRouter';
@@ -17,6 +18,7 @@ export function generateOpenAPIDocument() {
     wordGeneratorRegistry,
     excelGeneratorRegistry,
     notionDatabaseRegistry,
+    codeExecutorRegistry,
   ]);
   const generator = new OpenApiGeneratorV3(registry.definitions);
 

@@ -47,7 +47,7 @@ app.use('/powerpoint-generator', powerpointGeneratorRouter);
 app.use('/word-generator', wordGeneratorRouter);
 app.use('/excel-generator', excelGeneratorRouter);
 app.use('/notion-database', notionDatabaseRouter);
-app.use('/code-executor', codeExecutorRouter);
+app.use('/code', codeExecutorRouter);
 
 // Swagger UI
 app.use(openAPIRouter);
