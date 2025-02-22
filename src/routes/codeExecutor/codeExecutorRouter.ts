@@ -291,6 +291,15 @@ codeExecutorRouter.post('/replace', async (req: Request, res: Response) => {
       return handleServiceResponse(serviceResponse, res);
     }
     const newContent = fileContent.replace(regExp, replaceStr);
+    if (newContent === fileContent) {
+      const serviceResponse = new ServiceResponse(
+        ResponseStatus.Failed,
+        `No matching text found in file ${filename} or replacement did not change the content`,
+        { newContent },
+        StatusCodes.BAD_REQUEST
+      );
+      return handleServiceResponse(serviceResponse, res);
+    }
     fs.writeFileSync(filePath, newContent, 'utf8');
     const serviceResponse = new ServiceResponse(
       ResponseStatus.Success,
@@ -316,7 +325,7 @@ export const codeExecutorRegistry = new OpenAPIRegistry();
 // Register the endpoints with updated schemas
 codeExecutorRegistry.registerPath({
   method: 'put',
-  path: '/:filename',
+  path: 'code/:filename',
   tags: ['Code Executor'],
   request: { body: createApiRequestBody(CodeFileSaveRequestSchema, 'application/json') },
   responses: createApiResponse(CodeExecutionResponseSchema, 'Success'),
@@ -324,14 +333,14 @@ codeExecutorRegistry.registerPath({
 
 codeExecutorRegistry.registerPath({
   method: 'get',
-  path: '/:filename',
+  path: 'code/:filename',
   tags: ['Code Executor'],
   responses: createApiResponse(CodeFileReadResponseSchema, 'Success'),
 });
 
 codeExecutorRegistry.registerPath({
   method: 'post',
-  path: '/execute',
+  path: 'code/execute',
   tags: ['Code Executor'],
   request: { body: createApiRequestBody(CodeExecutionRequestSchema, 'application/json') },
   responses: createApiResponse(CodeExecutionResponseSchema, 'Success'),
@@ -339,7 +348,7 @@ codeExecutorRegistry.registerPath({
 
 codeExecutorRegistry.registerPath({
   method: 'post',
-  path: '/replace',
+  path: 'code/replace',
   tags: ['Code Executor'],
   request: { body: createApiRequestBody(CodeReplaceRequestSchema, 'application/json') },
   responses: createApiResponse(CodeReplaceResponseSchema, 'Success'),
