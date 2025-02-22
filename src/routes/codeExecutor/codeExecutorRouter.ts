@@ -105,13 +105,10 @@ codeExecutorRouter.get('/:filename', async (req: Request, res: Response) => {
   }
   try {
     const code = fs.readFileSync(filePath, 'utf8');
-    const serviceResponse = new ServiceResponse(
-      ResponseStatus.Success,
-      `File ${filename} read successfully`,
-      { code },
-      StatusCodes.OK
-    );
-    return handleServiceResponse(serviceResponse, res);
+    return res.status(StatusCodes.OK).json({
+      message: `File ${filename} read successfully`,
+      data: { code },
+    });
   } catch (err) {
     const serviceResponse = new ServiceResponse(
       ResponseStatus.Failed,
@@ -314,7 +311,7 @@ codeExecutorRegistry.registerPath({
   method: 'put',
   path: '/:filename',
   tags: ['Code Executor'],
-  request: createApiRequestBody(CodeExecutorRequestBodySchema, 'application/json'),
+  request: { body: createApiRequestBody(CodeExecutorRequestBodySchema, 'application/json') },
   responses: createApiResponse(CodeExecutorResponseSchema, 'Success'),
 });
 
