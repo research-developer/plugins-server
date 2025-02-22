@@ -11,7 +11,14 @@ import { createApiResponse } from '@/api-docs/openAPIResponseBuilders';
 import { ResponseStatus, ServiceResponse } from '@/common/models/serviceResponse';
 import { handleServiceResponse } from '@/common/utils/httpHandlers';
 
-import { CodeExecutorRequestBodySchema, CodeExecutorResponseSchema } from './codeExecutorModel';
+import {
+  CodeExecutionRequestSchema,
+  CodeExecutionResponseSchema,
+  CodeFileReadResponseSchema,
+  CodeFileSaveRequestSchema,
+  CodeReplaceRequestSchema,
+  CodeReplaceResponseSchema,
+} from './codeExecutorModel';
 
 // Define the storage directory for code files
 const codeStorageDir = path.join(__dirname, '../../..', 'code_storage');
@@ -306,13 +313,36 @@ codeExecutorRouter.post('/replace', async (req: Request, res: Response) => {
 // Initialize OpenAPI registry for the code executor
 export const codeExecutorRegistry = new OpenAPIRegistry();
 
-// Register the paths and operations for the code executor
+// Register the endpoints with updated schemas
 codeExecutorRegistry.registerPath({
   method: 'put',
   path: '/:filename',
   tags: ['Code Executor'],
-  request: { body: createApiRequestBody(CodeExecutorRequestBodySchema, 'application/json') },
-  responses: createApiResponse(CodeExecutorResponseSchema, 'Success'),
+  request: { body: createApiRequestBody(CodeFileSaveRequestSchema, 'application/json') },
+  responses: createApiResponse(CodeExecutionResponseSchema, 'Success'),
+});
+
+codeExecutorRegistry.registerPath({
+  method: 'get',
+  path: '/:filename',
+  tags: ['Code Executor'],
+  responses: createApiResponse(CodeFileReadResponseSchema, 'Success'),
+});
+
+codeExecutorRegistry.registerPath({
+  method: 'post',
+  path: '/execute',
+  tags: ['Code Executor'],
+  request: { body: createApiRequestBody(CodeExecutionRequestSchema, 'application/json') },
+  responses: createApiResponse(CodeExecutionResponseSchema, 'Success'),
+});
+
+codeExecutorRegistry.registerPath({
+  method: 'post',
+  path: '/replace',
+  tags: ['Code Executor'],
+  request: { body: createApiRequestBody(CodeReplaceRequestSchema, 'application/json') },
+  responses: createApiResponse(CodeReplaceResponseSchema, 'Success'),
 });
 
 export { codeExecutorRouter };
