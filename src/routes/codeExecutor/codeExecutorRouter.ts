@@ -325,21 +325,21 @@ export const codeExecutorRegistry = new OpenAPIRegistry();
 // Register the endpoints with updated schemas
 codeExecutorRegistry.registerPath({
   method: 'get',
-  path: 'code/:filename',
+  path: '/code/:filename',
   tags: ['Code Executor'],
   responses: createApiResponse(CodeFileReadResponseSchema, 'Success'),
 });
 
 codeExecutorRegistry.registerPath({
   method: 'post',
-  path: 'code/:filename',
+  path: '/code/:filename',
   tags: ['Code Executor'],
   responses: createApiResponse(CodeExecutionResponseSchema, 'Success'),
 });
 
 codeExecutorRegistry.registerPath({
   method: 'put',
-  path: 'code/:filename',
+  path: '/code/:filename',
   tags: ['Code Executor'],
   request: { body: createApiRequestBody(CodeFileSaveRequestSchema, 'application/json') },
   responses: createApiResponse(CodeExecutionResponseSchema, 'Success'),
@@ -347,7 +347,7 @@ codeExecutorRegistry.registerPath({
 
 codeExecutorRegistry.registerPath({
   method: 'patch',
-  path: 'code/:filename',
+  path: '/code/:filename',
   tags: ['Code Executor'],
   request: { body: createApiRequestBody(CodeFilePatchRequestSchema, 'application/json') },
   responses: createApiResponse(CodeReplaceResponseSchema, 'Success'),
@@ -355,7 +355,7 @@ codeExecutorRegistry.registerPath({
 
 codeExecutorRegistry.registerPath({
   method: 'delete',
-  path: 'code/:filename',
+  path: '/code/:filename',
   tags: ['Code Executor'],
   responses: createApiResponse(CodeExecutionResponseSchema, 'Success'),
 });
