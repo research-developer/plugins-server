@@ -58,10 +58,13 @@ codeExecutorRouter.get('/:filename', async (req: Request, res: Response) => {
   }
   try {
     const code = fs.readFileSync(filePath, 'utf8');
-    return res.status(StatusCodes.OK).json({
-      message: `File ${filename} read successfully`,
-      data: { code },
-    });
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Success,
+      `File ${filename} read successfully`,
+      { code },
+      StatusCodes.OK
+    );
+    return handleServiceResponse(serviceResponse, res);
   } catch (err) {
     const serviceResponse = new ServiceResponse(
       ResponseStatus.Failed,

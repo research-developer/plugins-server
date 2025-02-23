@@ -27,10 +27,11 @@ export const CodeExecutionRequestSchema = z
 
 /**
  * Schema for the response from code execution (POST /execute).
- * It returns captured stdout and stderr along with a message.
+ * It returns captured stdout and stderr along with a message and a success flag.
  */
 export const CodeExecutionResponseSchema = z
   .object({
+    success: z.boolean().describe('Indicates if the operation was successful'),
     message: z.string().describe('Execution result message.'),
     stdout: z.string().nullable().optional().describe('Captured standard output.'),
     stderr: z.string().nullable().optional().describe('Captured standard error.'),
@@ -42,6 +43,7 @@ export const CodeExecutionResponseSchema = z
  */
 export const CodeFileReadResponseSchema = z
   .object({
+    success: z.boolean().describe('Indicates if the operation was successful'),
     message: z.string().describe('Message indicating the result of file read operation.'),
     data: z
       .object({
@@ -65,10 +67,11 @@ export const CodeFilePatchRequestSchema = z
 
 /**
  * Schema for the response from replace operation (used for PATCH /:filename).
- * It includes updated file content.
+ * It includes updated file content along with a success flag.
  */
 export const CodeReplaceResponseSchema = z
   .object({
+    success: z.boolean().describe('Indicates if the operation was successful'),
     message: z.string().describe('Result message for replace operation.'),
     data: z
       .object({

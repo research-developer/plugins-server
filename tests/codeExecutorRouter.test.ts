@@ -57,7 +57,7 @@ describe('CodeExecutor Endpoints', () => {
 
     const response = await request(app).get(`/${filename}`);
     expect(response.status).toBe(200);
-    expect(response.body.data.code.trim()).toBe(hello_world.trim());
+    expect(response.body.responseObject.code.trim()).toBe(hello_world.trim());
   });
 
   test('PATCH /:filename valid request should update file content', async () => {
