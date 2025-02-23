@@ -52,20 +52,19 @@ export const CodeFileReadResponseSchema = z
   .describe('Response body for reading a code file.');
 
 /**
- * Schema for replace operation (POST /replace).
- * 'message' field uses a git-style find/replace syntax.
+ * Schema for updating a code file using find/replace via PATCH (/:[filename]).
+ * The request body now only contains the find/replace message as the filename comes from the URL.
  */
-export const CodeReplaceRequestSchema = z
+export const CodeFilePatchRequestSchema = z
   .object({
-    filename: z.string().describe('Filename of the code file to apply the find/replace.'),
     message: z
       .string()
       .describe('Find/replace command in the format: s<delimiter>find<delimiter>replace<delimiter>flags'),
   })
-  .describe('Request body for replacing content in a code file.');
+  .describe('Request body for updating a code file using find/replace.');
 
 /**
- * Schema for the response from replace operation (POST /replace).
+ * Schema for the response from replace operation (used for PATCH /:filename).
  * It includes updated file content.
  */
 export const CodeReplaceResponseSchema = z

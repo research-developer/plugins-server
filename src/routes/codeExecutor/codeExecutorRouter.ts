@@ -12,11 +12,10 @@ import { ResponseStatus, ServiceResponse } from '@/common/models/serviceResponse
 import { handleServiceResponse } from '@/common/utils/httpHandlers';
 
 import {
-  CodeExecutionRequestSchema,
   CodeExecutionResponseSchema,
+  CodeFilePatchRequestSchema,
   CodeFileReadResponseSchema,
   CodeFileSaveRequestSchema,
-  CodeReplaceRequestSchema,
   CodeReplaceResponseSchema,
 } from './codeExecutorModel';
 
@@ -35,59 +34,7 @@ function isAllowedFile(filename: string): boolean {
 
 const codeExecutorRouter: Router = express.Router();
 
-/**
- * PUT /:filename
- * Endpoint to save or update a code file.
- */
-codeExecutorRouter.put('/:filename', async (req: Request, res: Response) => {
-  const { filename } = req.params;
-  const { code } = req.body;
-
-  if (!isAllowedFile(filename)) {
-    const serviceResponse = new ServiceResponse(
-      ResponseStatus.Failed,
-      'File type not allowed',
-      null,
-      StatusCodes.BAD_REQUEST
-    );
-    return handleServiceResponse(serviceResponse, res);
-  }
-
-  if (typeof code !== 'string') {
-    const serviceResponse = new ServiceResponse(
-      ResponseStatus.Failed,
-      'Code must be a string',
-      null,
-      StatusCodes.BAD_REQUEST
-    );
-    return handleServiceResponse(serviceResponse, res);
-  }
-
-  const filePath = path.join(codeStorageDir, filename);
-  try {
-    fs.writeFileSync(filePath, code, 'utf8');
-    const serviceResponse = new ServiceResponse(
-      ResponseStatus.Success,
-      `File ${filename} saved successfully`,
-      null,
-      StatusCodes.OK
-    );
-    return handleServiceResponse(serviceResponse, res);
-  } catch (err) {
-    const serviceResponse = new ServiceResponse(
-      ResponseStatus.Failed,
-      `Error saving file: ${(err as Error).message}`,
-      null,
-      StatusCodes.INTERNAL_SERVER_ERROR
-    );
-    return handleServiceResponse(serviceResponse, res);
-  }
-});
-
-/**
- * GET /:filename
- * Endpoint to retrieve the content of a saved file.
- */
+// GET: Return source code
 codeExecutorRouter.get('/:filename', async (req: Request, res: Response) => {
   const { filename } = req.params;
   if (!isAllowedFile(filename)) {
@@ -99,7 +46,6 @@ codeExecutorRouter.get('/:filename', async (req: Request, res: Response) => {
     );
     return handleServiceResponse(serviceResponse, res);
   }
-
   const filePath = path.join(codeStorageDir, filename);
   if (!fs.existsSync(filePath)) {
     const serviceResponse = new ServiceResponse(
@@ -127,68 +73,32 @@ codeExecutorRouter.get('/:filename', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * POST /execute
- * Endpoint to execute a code file or directly provided code.
- * If a filename is provided, runs that file. Otherwise, if raw code is provided, creates a temporary file.
- */
-codeExecutorRouter.post('/execute', async (req: Request, res: Response) => {
-  // eslint-disable-next-line prefer-const
-  let { filename, code } = req.body;
-  let filePath: string;
-
-  if (filename) {
-    if (!isAllowedFile(filename)) {
-      const serviceResponse = new ServiceResponse(
-        ResponseStatus.Failed,
-        'File type not allowed',
-        null,
-        StatusCodes.BAD_REQUEST
-      );
-      return handleServiceResponse(serviceResponse, res);
-    }
-    filePath = path.join(codeStorageDir, filename);
-    if (!fs.existsSync(filePath)) {
-      const serviceResponse = new ServiceResponse(
-        ResponseStatus.Failed,
-        `File ${filename} not found`,
-        null,
-        StatusCodes.NOT_FOUND
-      );
-      return handleServiceResponse(serviceResponse, res);
-    }
-  } else if (code) {
-    // Default to a temporary .py file if no filename provided
-    filename = `temp_${Date.now()}.py`;
-    filePath = path.join(codeStorageDir, filename);
-    try {
-      fs.writeFileSync(filePath, code, 'utf8');
-    } catch (err) {
-      const serviceResponse = new ServiceResponse(
-        ResponseStatus.Failed,
-        `Error saving temporary file: ${(err as Error).message}`,
-        null,
-        StatusCodes.INTERNAL_SERVER_ERROR
-      );
-      return handleServiceResponse(serviceResponse, res);
-    }
-  } else {
+// POST: Execute file and return result
+codeExecutorRouter.post('/:filename', async (req: Request, res: Response) => {
+  const { filename } = req.params;
+  if (!isAllowedFile(filename)) {
     const serviceResponse = new ServiceResponse(
       ResponseStatus.Failed,
-      'Either filename or code must be provided',
+      'File type not allowed',
       null,
       StatusCodes.BAD_REQUEST
     );
     return handleServiceResponse(serviceResponse, res);
   }
-
-  // Determine the command to execute
+  const filePath = path.join(codeStorageDir, filename);
+  if (!fs.existsSync(filePath)) {
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Failed,
+      `File ${filename} not found`,
+      null,
+      StatusCodes.NOT_FOUND
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
   let command: string;
   if (filename.endsWith('.py')) {
-    // Use python command (ensure python is in the host's PATH)
     command = `python ${filePath}`;
   } else if (filename.endsWith('.jac')) {
-    // Hypothetical command for .jac files; update if needed
     command = `jac run ${filePath}`;
   } else {
     const serviceResponse = new ServiceResponse(
@@ -199,8 +109,6 @@ codeExecutorRouter.post('/execute', async (req: Request, res: Response) => {
     );
     return handleServiceResponse(serviceResponse, res);
   }
-
-  // Run the command and capture output
   exec(command, (error, stdout, stderr) => {
     if (error) {
       const serviceResponse = new ServiceResponse(
@@ -221,18 +129,62 @@ codeExecutorRouter.post('/execute', async (req: Request, res: Response) => {
   });
 });
 
-// New endpoint: Git-style find/replace functionality
-codeExecutorRouter.post('/replace', async (req: Request, res: Response) => {
-  const { filename, message } = req.body;
-  if (!filename || typeof filename !== 'string') {
+// PUT: Create new file
+codeExecutorRouter.put('/:filename', async (req: Request, res: Response) => {
+  const { filename } = req.params;
+  const { code } = req.body;
+  if (!isAllowedFile(filename)) {
     const serviceResponse = new ServiceResponse(
       ResponseStatus.Failed,
-      'Filename must be provided as a string',
+      'File type not allowed',
       null,
       StatusCodes.BAD_REQUEST
     );
     return handleServiceResponse(serviceResponse, res);
   }
+  if (typeof code !== 'string') {
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Failed,
+      'Code must be a string',
+      null,
+      StatusCodes.BAD_REQUEST
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+  const filePath = path.join(codeStorageDir, filename);
+  if (fs.existsSync(filePath)) {
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Failed,
+      `File ${filename} already exists`,
+      null,
+      StatusCodes.CONFLICT
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+  try {
+    fs.writeFileSync(filePath, code, 'utf8');
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Success,
+      `File ${filename} created successfully`,
+      null,
+      StatusCodes.OK
+    );
+    return handleServiceResponse(serviceResponse, res);
+  } catch (err) {
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Failed,
+      `Error creating file: ${(err as Error).message}`,
+      null,
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+});
+
+// PATCH: Update existing file using find/replace logic
+codeExecutorRouter.patch('/:filename', async (req: Request, res: Response) => {
+  const { filename } = req.params;
+  const { message } = req.body;
   if (!message || typeof message !== 'string') {
     const serviceResponse = new ServiceResponse(
       ResponseStatus.Failed,
@@ -311,7 +263,55 @@ codeExecutorRouter.post('/replace', async (req: Request, res: Response) => {
   } catch (err) {
     const serviceResponse = new ServiceResponse(
       ResponseStatus.Failed,
-      `Error processing file: ${(err as Error).message}`,
+      `Error updating file: ${(err as Error).message}`,
+      null,
+      StatusCodes.INTERNAL_SERVER_ERROR
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+});
+
+// DELETE: Move file to .trash folder
+codeExecutorRouter.delete('/:filename', async (req: Request, res: Response) => {
+  const { filename } = req.params;
+  if (!isAllowedFile(filename)) {
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Failed,
+      'File type not allowed',
+      null,
+      StatusCodes.BAD_REQUEST
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+  const filePath = path.join(codeStorageDir, filename);
+  if (!fs.existsSync(filePath)) {
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Failed,
+      `File ${filename} not found`,
+      null,
+      StatusCodes.NOT_FOUND
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+  // Define trash folder path
+  const trashDir = path.join(codeStorageDir, '.trash');
+  if (!fs.existsSync(trashDir)) {
+    fs.mkdirSync(trashDir, { recursive: true });
+  }
+  const trashPath = path.join(trashDir, filename);
+  try {
+    fs.renameSync(filePath, trashPath);
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Success,
+      `File ${filename} moved to trash successfully`,
+      null,
+      StatusCodes.OK
+    );
+    return handleServiceResponse(serviceResponse, res);
+  } catch (err) {
+    const serviceResponse = new ServiceResponse(
+      ResponseStatus.Failed,
+      `Error moving file to trash: ${(err as Error).message}`,
       null,
       StatusCodes.INTERNAL_SERVER_ERROR
     );
@@ -324,14 +324,6 @@ export const codeExecutorRegistry = new OpenAPIRegistry();
 
 // Register the endpoints with updated schemas
 codeExecutorRegistry.registerPath({
-  method: 'put',
-  path: 'code/:filename',
-  tags: ['Code Executor'],
-  request: { body: createApiRequestBody(CodeFileSaveRequestSchema, 'application/json') },
-  responses: createApiResponse(CodeExecutionResponseSchema, 'Success'),
-});
-
-codeExecutorRegistry.registerPath({
   method: 'get',
   path: 'code/:filename',
   tags: ['Code Executor'],
@@ -340,18 +332,32 @@ codeExecutorRegistry.registerPath({
 
 codeExecutorRegistry.registerPath({
   method: 'post',
-  path: 'code/execute',
+  path: 'code/:filename',
   tags: ['Code Executor'],
-  request: { body: createApiRequestBody(CodeExecutionRequestSchema, 'application/json') },
   responses: createApiResponse(CodeExecutionResponseSchema, 'Success'),
 });
 
 codeExecutorRegistry.registerPath({
-  method: 'post',
-  path: 'code/replace',
+  method: 'put',
+  path: 'code/:filename',
   tags: ['Code Executor'],
-  request: { body: createApiRequestBody(CodeReplaceRequestSchema, 'application/json') },
+  request: { body: createApiRequestBody(CodeFileSaveRequestSchema, 'application/json') },
+  responses: createApiResponse(CodeExecutionResponseSchema, 'Success'),
+});
+
+codeExecutorRegistry.registerPath({
+  method: 'patch',
+  path: 'code/:filename',
+  tags: ['Code Executor'],
+  request: { body: createApiRequestBody(CodeFilePatchRequestSchema, 'application/json') },
   responses: createApiResponse(CodeReplaceResponseSchema, 'Success'),
+});
+
+codeExecutorRegistry.registerPath({
+  method: 'delete',
+  path: 'code/:filename',
+  tags: ['Code Executor'],
+  responses: createApiResponse(CodeExecutionResponseSchema, 'Success'),
 });
 
 export { codeExecutorRouter };
